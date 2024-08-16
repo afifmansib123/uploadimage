@@ -1,0 +1,62 @@
+import axios from 'axios';
+import React, { useState } from 'react';
+
+export default function SimpleUploadPage() {
+  const [loading, setLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [error, setError] = useState('');
+
+  const uploadImage = async (file) => {
+    const url = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`;
+
+    try {
+      setLoading(true);
+      const { data: { signature, timestamp } } = await axios('/api/admin/cloudinary-sign');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('signature', signature);
+      formData.append('timestamp', timestamp);
+      formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY);
+
+      const { data } = await axios.post(url, formData);
+      setImageUrl(data.secure_url);
+      setLoading(false);
+      setError('');
+    } catch (err) {
+      setLoading(false);
+      setError('Upload failed: ' + err.message);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      uploadImage(file);
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-10 p-4 border border-gray-300 rounded-lg shadow-lg">
+      <h1 className="text-lg font-bold mb-4">Upload Image</h1>
+      <input
+        type="file"
+        onChange={handleFileChange}
+        className="mb-4"
+      />
+      {loading && <div>Uploading...</div>}
+      {error && <div className="text-red-500">{error}</div>}
+      {imageUrl && (
+        <div>
+          <h2 className="text-md font-semibold mb-2">Uploaded Image URL:</h2>
+          <input
+            type="text"
+            value={imageUrl}
+            readOnly
+            className="w-full p-2 border border-gray-300 rounded-md"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
